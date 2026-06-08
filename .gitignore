@@ -1,5 +1,54 @@
-**/__cache__
-**/.DS_Store
-**/__pycache__
-.venv/
+# ============================================================
+# 中国法律法规数据库 — .gitignore
+# ============================================================
+
+# 缓存和临时文件
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+__pycache__
+.sync_state.json
+
+# LawRefBook 源文件目录（从 GitHub 定期拉取，不纳入本仓库版本管理）
+# 只保留我们转换后的 laws/ 输出和工具脚本
+刑法/
+宪法/
+宪法相关法/
+民法商法/
+行政法/
+经济法/
+社会法/
+民法典/
+行政法规/
+司法解释/
+部门规章/
+诉讼与非诉讼程序法/
+监察法规/
+案例/
+其他/
+DLC/
+
+# LawRefBook 原始脚本和工具
+scripts/
+db.sqlite3
+*.db
+
+# release/
 release/
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Python
+venv/
+.venv/
+env/
+__cache__/
