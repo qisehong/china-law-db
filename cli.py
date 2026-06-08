@@ -8,11 +8,14 @@
   python cli.py check [--limit 20]     # 查看 NPC 最新立法
   python cli.py stats                  # 分类统计
   python cli.py search <关键词>        # 全文搜索
+  python cli.py update [--limit 50]    # 增量更新（检测+抓取新法）
+  python cli.py verify [--limit 30]    # 比对本地与 NPC 差异
 """
 
 import argparse
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # 确保项目根在 sys.path
@@ -161,6 +164,22 @@ def cmd_verify(args: argparse.Namespace) -> None:
         print(f"  {marker} [{status}] {title} ({date})")
 
 
+def cmd_update(args: argparse.Namespace) -> None:
+    """增量更新：检测 NPC 最新立法并从 Wikisource 抓取缺失的法律"""
+    from src.updater import Updater
+
+    updater = Updater(LAWS_OUT)
+    print(f"🔄 开始增量更新检查 ({datetime.now().strftime('%Y-%m-%d %H:%M')})")
+    print(f"   检查范围: NPC 数据库最新 {args.limit} 条\n")
+
+    results = updater.run(check_limit=args.limit, dry_run=args.dry_run)
+
+    if not args.dry_run and results["saved"] > 0:
+        print(f"\n💡 运行以下命令提交新增法律:")
+        print(f"   git add laws/ .sync_state.json")
+        print(f'   git commit -m "update: {results["saved"]} new laws {datetime.now().strftime("%Y-%m-%d")}"')
+
+
 # ====================================================================
 # 主入口
 # ====================================================================
@@ -173,9 +192,11 @@ def build_parser() -> argparse.ArgumentParser:
 示例:
   python cli.py sync --full           # 首次全量同步
   python cli.py sync --dry-run        # 预览即将变更的文件
+  python cli.py update                # 增量更新（检测+抓取新法）
   python cli.py check                 # 查看 NPC 最新 30 部立法
   python cli.py stats                 # 查看本地分类统计
   python cli.py search "公司法"       # 搜索包含关键词的法律
+  python cli.py update                # 增量更新（检测缺失并从 Wikisource 抓取）
   python cli.py verify --limit 10     # 比对前 10 部最新法律
         """,
     )
@@ -206,6 +227,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("verify", help="用 NPC 官方 API 验证本地法律是否有缺失")
     p.add_argument("--limit", "-n", type=int, default=30, help="检查条数（默认 30）")
     p.set_defaults(func=cmd_verify)
+
+    # update
+    p = sub.add_parser("update", help="增量更新：检测缺失法律并从 Wikisource 抓取")
+    p.add_argument("--limit", "-n", type=int, default=50, help="检查 NPC 最新 N 条（默认 50）")
+    p.add_argument("--dry-run", action="store_true", help="仅检测，不实际抓取")
+    p.set_defaults(func=cmd_update)
 
     return parser
 

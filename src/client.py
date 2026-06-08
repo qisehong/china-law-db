@@ -127,6 +127,66 @@ class NPCClient:
                 time.sleep(2)
         return results
 
+    # 各省/自治区/直辖市/省会关键词
+    LOCAL_KEYWORDS = [
+        "省", "市", "自治区", "自治州", "自治县", "经济特区",
+        "北京", "上海", "天津", "重庆",
+        "广东", "广州", "深圳", "江苏", "南京", "浙江", "杭州",
+        "山东", "济南", "青岛", "河南", "郑州", "河北", "石家庄",
+        "四川", "成都", "湖北", "武汉", "湖南", "长沙", "福建", "厦门",
+        "安徽", "合肥", "辽宁", "沈阳", "大连", "陕西", "西安",
+        "江西", "南昌", "广西", "南宁", "云南", "昆明", "贵州", "贵阳",
+        "山西", "太原", "吉林", "长春", "黑龙江", "哈尔滨",
+        "内蒙古", "新疆", "西藏", "宁夏", "甘肃", "兰州", "青海", "海南",
+        "浦东", "海南自由贸易港",
+    ]
+
+    def get_national_latest(self, limit: int = 50) -> List[dict]:
+        """获取最新国家层面立法（排除地方法规）
+
+        只保留: 法律, 行政法规, 司法解释, 监察法规, 部门规章
+        排除: 地方法规, 地方性法规, 修改/废止的决定
+        """
+        all_latest = self.get_latest_laws(limit=limit)
+        national = []
+        for law in all_latest:
+            law_type = law.get("flxz", "")
+            title = law.get("title", "")
+            # 排除地方法规
+            if "地方" in law_type:
+                continue
+            # 排除标题中含地方关键词的（如 XX省XX条例）
+            if any(kw in title for kw in self.LOCAL_KEYWORDS):
+                continue
+            # 排除纯修改/废止的决定
+            if "修改" in law_type and "地方" in title:
+                continue
+            national.append(law)
+        return national
+
+    def compare_with_local(self, local_titles: set, limit: int = 50) -> List[dict]:
+        """比对 NPC 最新立法与本地库，找出缺失的法律
+
+        参数:
+            local_titles: 本地已有的法律标题集合
+            limit: 检查的最新法律数量
+
+        返回: 本地缺失的法律列表
+        """
+        national = self.get_national_latest(limit=limit)
+        missing = []
+        for law in national:
+            title = law.get("title", "")
+            # 模糊匹配：本地标题包含法名或法名包含本地标题
+            found = False
+            for t in local_titles:
+                if title in t or t in title:
+                    found = True
+                    break
+            if not found:
+                missing.append(law)
+        return missing
+
 
 # ------------------------------------------------------------------
 # 状态码映射（来自 NPC 数据库 sxx 字段）
