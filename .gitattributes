@@ -1,1 +1,5 @@
+# 固定行尾：shell 脚本与 workflow 必须为 LF（Linux runner / bash 兼容）
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
 *.sqlite3 diff=sqlite3

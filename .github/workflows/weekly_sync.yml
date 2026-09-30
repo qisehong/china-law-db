@@ -1,0 +1,41 @@
+name: weekly-sync
+
+# 每周日 22:00（北京时间）= 周日 14:00 UTC 自动同步 flk.npc.gov.cn
+# 注意：GitHub Actions 定时调度不保证准点，高峰期可能有数分钟到半小时延迟
+on:
+  schedule:
+    - cron: "0 14 * * 0" # UTC 周日 14:00 = 北京时间周日 22:00（UTC+8 无夏令时）
+  workflow_dispatch: # 手动触发，便于首次验证与补跑
+
+# 提交 laws/ 与同步状态需要写权限
+permissions:
+  contents: write
+
+# 防止定时与手动触发并发运行导致 push 冲突
+concurrency:
+  group: weekly-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 与 weekly_sync.sh 调用同一条命令，避免双份逻辑漂移
+      - name: Sync from flk.npc.gov.cn
+        run: python cli.py sync --include-local
+
+      # 条件提交逻辑单一归属 scripts/commit_if_changed.sh（与 weekly_sync.sh 共用）
+      - name: Commit and push if changed
+        run: bash scripts/commit_if_changed.sh
