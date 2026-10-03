@@ -114,16 +114,16 @@ def cmd_stats(args: argparse.Namespace) -> None:
         print(f"  {cat:20s}  {count:5d}  {bar}")
 
     if args.compare:
-        print("\n🔍 与官方数据库比对:")
+        # 复用 verify 的比对逻辑（官方检索 total，含历史版本，与本地口径一致；
+        # 官方首页 aggregate 是"现行有效"口径，与本地全量直接相比必然"多出"）
+        print("\n🔍 与官方数据库比对（检索 total 口径）:")
         try:
-            official = engine.client.get_category_counts()
-            for name, cnt in official.items():
-                local = stats["categories"].get(name, 0)
-                gap = cnt - local
+            for name, local, official in engine.verify_against_official():
+                gap = official - local
                 mark = "✅" if gap == 0 else (f"⚠️ 少 {gap} 部" if gap > 0 else f"ℹ️ 多 {-gap} 部")
-                print(f"    {name:10s} 官方 {cnt:6d} | 本地 {local:6d} | {mark}")
+                print(f"    {name:14s} 官方 {official:6d} | 本地 {local:6d} | {mark}")
         except Exception as e:
-            print(f"    ⚠️ 官方统计获取失败: {e}")
+            print(f"    ⚠️ 官方比对失败: {e}")
 
 
 def cmd_verify(args: argparse.Namespace) -> None:
@@ -153,20 +153,25 @@ def cmd_search(args: argparse.Namespace) -> None:
             capture_output=True, text=True, timeout=60,
         )
         lines = [l.strip() for l in result.stdout.strip().split("\n") if l]
-        if not lines:
-            print("  未找到匹配结果")
-            return
-        for line in lines[:args.limit]:
-            p = Path(line)
-            try:
-                rel = p.relative_to(LAWS_OUT)
-            except ValueError:
-                rel = p
-            print(f"  📄 {rel}")
-        if len(lines) > args.limit:
-            print(f"\n  ... 共 {len(lines)} 条结果，显示前 {args.limit} 条")
-    except subprocess.TimeoutExpired:
-        print("  ⚠️ 搜索超时")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        # 无 grep（如 Windows 非 Git Bash 环境）或超时：回退 Python 全文扫描
+        print("  （grep 不可用，改用内置扫描）")
+        lines = [
+            str(p) for p in LAWS_OUT.rglob("*.md")
+            if keyword in p.read_text(encoding="utf-8", errors="ignore")
+        ]
+    if not lines:
+        print("  未找到匹配结果")
+        return
+    for line in lines[:args.limit]:
+        p = Path(line)
+        try:
+            rel = p.relative_to(LAWS_OUT)
+        except ValueError:
+            rel = p
+        print(f"  📄 {rel}")
+    if len(lines) > args.limit:
+        print(f"\n  ... 共 {len(lines)} 条结果，显示前 {args.limit} 条")
 
 
 # ====================================================================

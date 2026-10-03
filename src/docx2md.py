@@ -152,9 +152,6 @@ def extract_text_from_doc(path: Path) -> List[str]:
     noise = re.compile(r"^(\d{4,8}|机密.*|特急|加急|紧急|第\s*\d+\s*页|共\s*\d+\s*页)$")
     paras = [p for p in paras if not noise.match(p)]
     return paras
-    if sum(1 for p in paras if "\u4e00" <= p[0] <= "\u9fff") < 3:
-        raise ValueError(".doc 正文提取过短，疑似复杂格式")
-    return paras
 
 
 def _clean_para(s: str) -> str:
@@ -227,7 +224,7 @@ def generate_frontmatter(
     meta: Dict,
     category: str,
     subcategory: Optional[str] = None,
-    status: str = "现行有效",
+    status: str = "未知",
     npc_status: Optional[str] = None,
     issuing_authority: Optional[str] = None,
     api_publish_date: Optional[str] = None,
@@ -236,6 +233,8 @@ def generate_frontmatter(
 
     api_publish_date: 官方 API 返回的公布日期(gbrq)，优先于 docx 解析结果
     （docx 段落中的日期可能是“通过”日期，与官方口径的公布日期不一致）
+    status 默认"未知"而非"现行有效"：官方时效性缺失/码值未知时，
+    宁可标注未知也不可把可能已废止的法规标成有效。
     """
     if npc_status:
         status = npc_status

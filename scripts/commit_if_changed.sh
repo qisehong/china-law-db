@@ -5,12 +5,12 @@ set -e
 
 if git status --porcelain -- laws/ .flk_sync_state.json | grep -q .; then
     NEW_COUNT=$(git -c core.quotepath=false status --porcelain -- laws/ | grep -c '^??' || true)
-    git config user.name "china-law-db bot"
-    git config user.email "actions@users.noreply.github.com"
+    # bot 身份用 -c 一次性注入，不写进仓库配置（git config 会永久覆盖本地提交者身份）
+    GIT_BOT=(-c user.name="china-law-db bot" -c user.email="actions@users.noreply.github.com")
     git add laws/
     # 状态文件首次提交前可能尚不存在，按存在性守卫添加，避免 pathspec 报错中断
     if [ -f .flk_sync_state.json ]; then git add .flk_sync_state.json; fi
-    git commit -m "weekly sync from flk.npc.gov.cn $(date -u +'%Y-%m-%d')：新增 ${NEW_COUNT} 部法律法规"
+    git "${GIT_BOT[@]}" commit -m "weekly sync from flk.npc.gov.cn $(date -u +'%Y-%m-%d')：新增 ${NEW_COUNT} 部法律法规"
     if git remote | grep -q origin; then
         git push origin HEAD
     else

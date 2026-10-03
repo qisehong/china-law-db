@@ -15,6 +15,9 @@ set -e
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_FILE="$REPO_DIR/sync.log"
 
+# Python 解释器：Linux cron 通常是 python3，Windows Git Bash 通常只有 python
+PY="$(command -v python3 || command -v python)"
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
@@ -33,11 +36,11 @@ fi
 # 1. 增量同步官方数据库（五大国家层面分类 + 地方法规仅沪苏浙）
 # 与 .github/workflows/weekly_sync.yml 调用同一条命令，避免双份逻辑漂移
 log "1/3 直连 flk.npc.gov.cn 增量同步..."
-python3 cli.py sync --include-local 2>&1 | while read line; do log "  $line"; done
+"$PY" cli.py sync --include-local 2>&1 | while read line; do log "  $line"; done
 
 # 2. 官方最新立法速报（写入日志便于审计）
 log "2/3 检查官方最新立法..."
-python3 cli.py check --limit 10 2>&1 | while read line; do log "  $line"; done
+"$PY" cli.py check --limit 10 2>&1 | while read line; do log "  $line"; done
 
 # 3. 条件提交（逻辑单一归属 scripts/commit_if_changed.sh，与 workflow 共用）
 log "3/3 提交变更..."

@@ -102,15 +102,16 @@ LEAF_NAMES: Dict[int, str] = {
     320: "高法司法解释", 330: "高检司法解释", 340: "联合发布司法解释", 350: "修改、废止的决定",
 }
 
-# 时效性状态码（详情接口 sxx 字段）
+# 时效性状态码（检索/详情接口 sxx 字段）
+# code → label 依据官方前端筛选项定义（assets/index-*.js，2026-10 实测）：
+#   [{label:"尚未生效",key:4},{label:"有效",key:3},{label:"已修改",key:2},{label:"已废止",key:1}]
+# 官方仅 1-4 四个码值，5/6/7 实测返回 0 条；标签沿用仓库惯例
+# （"现行有效"=官方"有效"，"已被修改"=官方"已修改"）。
 STATUS_MAP = {
-    1: "尚未生效",
-    2: "试行",
+    1: "已废止",
+    2: "已被修改",
     3: "现行有效",
-    4: "已被修改",
-    5: "废止或失效",
-    6: "部分失效",
-    7: "部分有效",
+    4: "尚未生效",
 }
 
 
@@ -205,11 +206,13 @@ class FlkClient:
         """遍历某分类下全部条目（生成器）。"""
         page = 1
         total = None
+        collected = 0
         while True:
             rows, total = self.search_category(code_ids, page=page, sxx=sxx, zdjg_ids=zdjg_ids)
             if not rows:
                 break
             for row in rows:
+                collected += 1
                 yield row
             if progress:
                 done = page * self.page_size
@@ -219,6 +222,10 @@ class FlkClient:
             page += 1
         if progress:
             print()
+            # 官方列表按公布日期倒序且无游标，翻页间隙数据漂移可能漏抓/重抓个别行。
+            # 漏抓的条目本次会被跳过，下次同步自动补上；显式告警以便发现。
+            if total is not None and collected != total:
+                print(f"  ⚠️ 检索条数不齐: 实抓 {collected}/{total}（分页漂移，缺失条目下次同步自动补齐）")
 
     def detail(self, bbbs: str) -> dict:
         """单部法律详情（元数据 + ossFile 路径）"""
@@ -289,17 +296,9 @@ class FlkClient:
 
 def national_latest_filtered(client: FlkClient, limit: int = 50) -> List[dict]:
     """新法速递中剔除地方法规后的国家层面立法"""
-    LOCAL_KEYWORDS = (
-        "省", "市", "自治区", "自治州", "自治县", "经济特区",
-        "浦东", "海南自由贸易港", "联盟", "协作",
-    )
     result = []
     for law in client.get_latest_laws(limit=limit):
         if "地方" in law.get("flxz", ""):
-            continue
-        title = law.get("title", "")
-        # 标题含地级行政区关键词的粗过滤（如"深圳经济特区…"）
-        if law.get("flxz") == "地方法规":
             continue
         result.append(law)
     return result[:limit]
