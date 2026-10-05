@@ -31,3 +31,4 @@ release/
 venv/
 .venv/
 env/
+.zcodeignore
