@@ -47,6 +47,22 @@ def safe_filename(title: str) -> str:
     return name or "未命名"
 
 
+# Linux（ext4）单个文件名上限 255 字节，中文 UTF-8 每字 3 字节；
+# "修改决定"类标题含被修改法规全名，文件名可达 320+ 字节，超限会使
+# Linux 端 git checkout/clone 失败（File name too long），Windows NTFS
+# 按字符计上限故本地无感。生成文件名时按字节截断并补省略号，
+# frontmatter 中的 title 保持完整。
+MAX_FILENAME_BYTES = 250
+
+
+def cap_filename_bytes(name: str, max_bytes: int = MAX_FILENAME_BYTES) -> str:
+    """文件名主干按 UTF-8 字节数截断（扩展名另行拼接，需计入预算）"""
+    raw = name.encode("utf-8")
+    if len(raw) <= max_bytes:
+        return name
+    return raw[: max_bytes - 3].decode("utf-8", errors="ignore") + "…"
+
+
 def _best_decode(raw: bytes) -> str:
     """按中日韩字符密度选择最优解码（utf-16-le / gbk）"""
     best_txt, best_score = "", -1

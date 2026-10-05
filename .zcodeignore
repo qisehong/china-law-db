@@ -1,0 +1,63 @@
+# ============================================================
+# 中国法律法规数据库 — .gitignore
+# ============================================================
+
+# 缓存和临时文件（docx 下载缓存、API 探针等）
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+# 注：.flk_sync_state.json 是增量同步状态，必须被 git 跟踪并随 run 提交，
+# 否则 CI 每次都会全量重下数千部法律
+.sync_state.json
+
+# 同步日志
+sync.log
+
+# release/
+release/
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Python
+venv/
+.venv/
+env/
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+node_modules/
+bower_components/
+jspm_packages/
+site-packages/
+coverage/
+htmlcov/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+cdk.out/
+*.egg-info/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）

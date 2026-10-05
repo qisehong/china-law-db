@@ -27,7 +27,7 @@ from src.flk import (
     STATUS_MAP,
     TOP_CATEGORIES,
 )
-from src.docx2md import convert_docx_to_law_md, safe_filename
+from src.docx2md import cap_filename_bytes, convert_docx_to_law_md, safe_filename
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT = PROJECT_ROOT / "laws"
@@ -206,7 +206,8 @@ class FlkSyncEngine:
             date_tag = f"({pub_date})" if pub_date else ""
 
             rel_dir = Path(category) / sub if sub else Path(category)
-            out_path = self.output_root / rel_dir / f"{safe_filename(title)}{date_tag}.md"
+            stem = cap_filename_bytes(f"{safe_filename(title)}{date_tag}")
+            out_path = self.output_root / rel_dir / f"{stem}.md"
             out_path.parent.mkdir(parents=True, exist_ok=True)
             # 不同公布日期的版本共存（与仓库现有惯例一致，如 专利法实施细则(2010)/(2023).md）
 
